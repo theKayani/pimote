@@ -6,7 +6,7 @@
 
   <groupId>com.thekayani</groupId>
   <artifactId>pimote</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>3.1</version>
 
   <name>pimote</name>
   <!-- FIXME change it to the project's website -->
@@ -14,20 +14,56 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
+    <java.version>11</java.version>
+    <maven.compiler.source>${java.version}</maven.compiler.source>
+    <maven.compiler.target>${java.version}</maven.compiler.target>
+    <!-- DEPENDENCIES VERSIONS -->
+    <slf4j.version>1.7.32</slf4j.version>
+    <pi4j.version>2.3.0</pi4j.version>
+    <!-- BUILD PLUGIN VERSIONS -->
+    <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
+    <maven-jar-plugin.version>3.1.0</maven-jar-plugin.version>
+    <maven-shade-plugin.version>3.2.4</maven-shade-plugin.version>
   </properties>
 
   <dependencies>
     <dependency>
-      <groupId>com.pi4j</groupId>
-      <artifactId>pi4j-device</artifactId>
-      <version>1.3</version>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-jdk14</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+    <!-- include Pi4J Core -->
+    <dependency>
+      <groupId>com.pi4j</groupId>
+      <artifactId>pi4j-core</artifactId>
+      <version>${pi4j.version}</version>
+    </dependency>
+    <!-- include Pi4J Plugins (Platforms and I/O Providers) -->
+    <dependency>
+      <groupId>com.pi4j</groupId>
+      <artifactId>pi4j-plugin-raspberrypi</artifactId>
+      <version>${pi4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.pi4j</groupId>
+      <artifactId>pi4j-plugin-pigpio</artifactId>
+      <version>${pi4j.version}</version>
+    </dependency>
+    <!-- THE OTHER DEPENDENCIES-->
     <dependency>
       <groupId>com.thekayani</groupId>
       <artifactId>hklib</artifactId>
-      <version>1.1.0</version>
+      <version>1.3.2</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
@@ -38,29 +74,66 @@
   </dependencies>
 
   <build>
+    <finalName>pimote-${project.version}</finalName>
+
     <plugins>
+      <!--
+      https://maven.apache.org/plugins/maven-compiler-plugin/
+      The Compiler Plugin is used to compile the sources of your project.
+      -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <version>3.3.0</version>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>${maven-compiler-plugin.version}</version>
+        <configuration>
+          <release>${java.version}</release>
+          <showDeprecation>true</showDeprecation>
+          <showWarnings>true</showWarnings>
+          <verbose>false</verbose>
+        </configuration>
+      </plugin>
+
+      <!--
+      https://maven.apache.org/plugins/maven-jar-plugin/
+      This plugin provides the capability to build (executable) jars and is used here to set the mainClass
+      which will start the application.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>${maven-jar-plugin.version}</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <mainClass>com.hk.pimote.Pimote</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
+
+      <!--
+      https://maven.apache.org/plugins/maven-shade-plugin/
+      This plugin provides the capability to package the artifact in an uber-jar, including its dependencies and
+      to shade - i.e. rename - the packages of some of the dependencies. The transformer will combine the files
+      in the META-INF.services directories of multiple Pi4J plugins with the same package name into one file.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>${maven-shade-plugin.version}</version>
+        <configuration>
+          <transformers>
+            <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+          </transformers>
+        </configuration>
         <executions>
           <execution>
             <phase>package</phase>
             <goals>
-              <goal>single</goal>
+              <goal>shade</goal>
             </goals>
           </execution>
         </executions>
-        <configuration>
-          <archive>
-            <manifest>
-              <mainClass>com.hk.pimote.Main</mainClass>
-            </manifest>
-          </archive>
-          <descriptorRefs>
-            <descriptorRef>jar-with-dependencies</descriptorRef>
-          </descriptorRefs>
-        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -75,56 +148,12 @@
             </goals>
             <configuration>
               <target>
-                <copy file="${basedir}/target/pimote-${project.version}-jar-with-dependencies.jar" tofile="${basedir}/pimote.jar" overwrite="true"/>
+                <copy file="${basedir}/target/pimote-${project.version}.jar" tofile="${basedir}/pimote-${project.version}.jar" overwrite="true"/>
               </target>
             </configuration>
           </execution>
         </executions>
       </plugin>
     </plugins>
-    <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
-      <plugins>
-        <!-- clean lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#clean_Lifecycle -->
-        <plugin>
-          <artifactId>maven-clean-plugin</artifactId>
-          <version>3.1.0</version>
-        </plugin>
-        <!-- default lifecycle, jar packaging: see https://maven.apache.org/ref/current/maven-core/default-bindings.html#Plugin_bindings_for_jar_packaging -->
-        <plugin>
-          <artifactId>maven-resources-plugin</artifactId>
-          <version>3.0.2</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.8.0</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.22.1</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-jar-plugin</artifactId>
-          <version>3.0.2</version>
-          <executions>
-            <execution>
-              <id>default-jar</id>
-              <phase>none</phase>
-              <configuration>
-                <finalName>unwanted</finalName>
-                <classifier>unwanted</classifier>
-              </configuration>
-            </execution>
-          </executions>
-        </plugin>
-        <plugin>
-          <artifactId>maven-install-plugin</artifactId>
-          <version>2.5.2</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-deploy-plugin</artifactId>
-          <version>2.8.2</version>
-        </plugin>
-      </plugins>
-    </pluginManagement>
   </build>
 </project>

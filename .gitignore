@@ -28,3 +28,7 @@ hs_err_pid*
 
 # Build files
 target/
+!pimote-*.jar
+start_client.bat
+start_client.sh
+dependency-reduced-pom.xml
