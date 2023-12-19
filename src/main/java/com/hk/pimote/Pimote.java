@@ -143,10 +143,15 @@ public class Pimote implements MessageConsumer
 			boolean state = json.getBoolean("state");
 
 			LOG.info("Changing switch state: " + state);
-			if(GPIO_DISABLED)
-				LOG.warning("GPIO DISABLED!");
-			else
+			if (!GPIO_DISABLED)
+			{
 				swtch.setState(state);
+
+				JsonObject obj = new JsonObject().put("state", state);
+				client.publish(MQTT_PREFIX + "/get/" + DEVICE_TAG, Json.write(obj), 1, true);
+			}
+			else
+				LOG.warning("GPIO DISABLED!");
 		}
 		else if(topic.equals(MQTT_PREFIX + "/restart/" + DEVICE_TAG))
 		{
